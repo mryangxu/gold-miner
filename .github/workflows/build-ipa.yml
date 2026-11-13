@@ -1,0 +1,71 @@
+name: Build unsigned IPA
+
+# 在 GitHub 的 macOS 云端机器上编译出未签名 IPA，
+# 下载后可直接用 TrollStore 安装（无需越狱、无需证书）。
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen / ldid
+        run: |
+          brew install xcodegen
+          brew install ldid || true
+
+      - name: 准备网页资源
+        run: |
+          rm -rf ios/GoldMiner/www
+          mkdir -p ios/GoldMiner/www
+          cp -R www/. ios/GoldMiner/www/
+          ls -la ios/GoldMiner/www
+
+      - name: 生成 Xcode 工程
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: 编译（关闭签名）
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project GoldMiner.xcodeproj \
+            -scheme GoldMiner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            build
+
+      - name: 打包 IPA
+        working-directory: ios
+        run: |
+          set -e
+          APP="build/Build/Products/Release-iphoneos/GoldMiner.app"
+          ls -la "$APP"
+          rm -rf Payload GoldMiner.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -S Payload/GoldMiner.app/GoldMiner || true
+          fi
+          zip -qry GoldMiner.ipa Payload
+          ls -lh GoldMiner.ipa
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoldMiner-ipa
+          path: ios/GoldMiner.ipa
+          if-no-files-found: error

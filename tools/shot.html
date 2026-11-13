@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>shot harness</title>
+<style>
+  html, body { margin:0;padding:0;height:100%;width:100%;background:#120e08;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
+  canvas { display:block;position:fixed;left:0;top:0;width:100%;height:100%; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+(function () {
+  if (/[?&]save=1/.test(location.search)) {
+    try {
+      localStorage.setItem('goldminer.save.v2', JSON.stringify({ level: 37, best: 37, wallet: 1860, dynamite: 2 }));
+    } catch (e) { }
+  }
+})();
+</script>
+<script src="../www/game.js"></script>
+<script>
+(function () {
+  function p(k, d) {
+    var m = location.search.match(new RegExp('[?&]' + k + '=([^&]*)'));
+    return m ? decodeURIComponent(m[1]) : d;
+  }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var api = window.__GOLD_MINER__;
+      if (!api) return;
+      var state = p('state', 'playing');
+      var level = parseInt(p('level', '1'), 10) || 1;
+
+      if (p('diff', '') !== '') api.setDifficulty(parseInt(p('diff', '1'), 10) || 0);
+      if (state === 'menu') { api.setState('menu'); return; }
+
+      api.startNewGame();
+      if (level > 1) api.setLevel(level);
+
+      api.G.wallet = 1860;
+      api.G.earnings = 940;
+      api.G.dynamite = 2;
+      api.G.strength = 5;
+
+      if (state === 'intro') { api.setState('intro'); return; }
+      if (state === 'complete') { api.G.completeInfo = { earned: 1240, bonus: 96 }; api.G.wallet = 2180; api.setState('complete'); return; }
+      if (state === 'shop') { api.G.wallet = 2180; api.setState('shop'); return; }
+      if (state === 'failed') { api.G.earnings = 620; api.setState('failed'); return; }
+      if (state === 'paused') { api.setState('paused'); return; }
+
+      // playing
+      api.setState('playing');
+      var frames = parseInt(p('f', '0'), 10);
+      var shootAt = p('shoot', '') === '1';
+      for (var i = 0; i < frames; i++) {
+        if (shootAt && api.G.hook.state === 'swing' && i % 20 === 0) api.shoot();
+        api.update(1 / 60);
+      }
+    }, 20);
+  });
+})();
+</script>
+</body>
+</html>

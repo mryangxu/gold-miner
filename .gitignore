@@ -1,0 +1,13 @@
+# 构建产物
+ios/build/
+ios/Payload/
+ios/*.ipa
+ios/GoldMiner.xcodeproj/
+ios/GoldMiner/Info.plist
+
+# 本地截图
+shots/
+
+# 系统
+.DS_Store
+node_modules/
