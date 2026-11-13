@@ -1952,6 +1952,9 @@
     if (save.best > 1) {
       text('最高纪录：第 ' + save.best + ' 关', W / 2, by + 420, 18, 'rgba(255,215,110,0.7)', 'center');
     }
+
+    // 版本号：方便确认装的是不是最新构建
+    text('v1.1', 26, H - 30, 14, 'rgba(255,255,255,0.22)', 'left');
   }
 
   function drawIntro() {
@@ -2286,15 +2289,59 @@
     return false;
   }
 
+  // TouchEvent 不继承 MouseEvent，Safari/iOS 上 e.clientX 是 undefined，
+  // 必须从 touches / changedTouches 里取坐标（桌面端 mousedown 才有 clientX）
+  function eventPoint(e) {
+    var list = (e.changedTouches && e.changedTouches.length) ? e.changedTouches
+      : ((e.touches && e.touches.length) ? e.touches : null);
+    if (list) {
+      var t = list[0];
+      if (typeof t.clientX === 'number' && typeof t.clientY === 'number') {
+        return { x: t.clientX, y: t.clientY };
+      }
+    }
+    if (typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      return { x: e.clientX, y: e.clientY };
+    }
+    if (typeof e.pageX === 'number' && typeof e.pageY === 'number') {
+      return { x: e.pageX, y: e.pageY };
+    }
+    return null;
+  }
+
+  function evFamily(e) {
+    var n = e.type || '';
+    if (n.indexOf('pointer') === 0) return 'p';
+    if (n.indexOf('touch') === 0) return 't';
+    return 'm';
+  }
+
+  // 同一次按压会依次触发 pointerdown / touchstart / mousedown，这里做去重
+  var downGate = { t: -9999, x: -999, y: -999, fam: '' };
+
+  function nowMs() {
+    return (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+  }
+
   function onDown(e) {
+    var pt = eventPoint(e);
+    if (!pt) return;
+
+    var now = nowMs();
+    var fam = evFamily(e);
+    if (fam !== downGate.fam && now - downGate.t < 400 &&
+        Math.abs(pt.x - downGate.x) < 12 && Math.abs(pt.y - downGate.y) < 12) {
+      return;
+    }
+    downGate.t = now; downGate.x = pt.x; downGate.y = pt.y; downGate.fam = fam;
+
     if (e.cancelable) e.preventDefault();
     audioInit();
-    var p = toLogical(e.clientX, e.clientY);
+    var p = toLogical(pt.x, pt.y);
+    if (!isFinite(p.x) || !isFinite(p.y)) return;
     if (handleTap(p.x, p.y)) return;
     if (G.state === 'playing') {
       shoot();
-    } else if (G.state === 'menu' && !save.hasSave) {
-      // 菜单空白点击无操作
     }
   }
 
@@ -2302,6 +2349,11 @@
     if (e.cancelable) e.preventDefault();
   }
 
+  // pointer / touch / mouse 三套都挂上，靠 downGate 去重，兼容各种 WebView
+  if (window.PointerEvent) {
+    window.addEventListener('pointerdown', onDown, { passive: false });
+    window.addEventListener('pointerup', onUp);
+  }
   window.addEventListener('touchstart', onDown, { passive: false });
   window.addEventListener('touchend', onUp, { passive: false });
   window.addEventListener('mousedown', onDown);
@@ -2323,6 +2375,10 @@
   });
 
   window.addEventListener('resize', resize);
+  window.addEventListener('pageshow', function () { resize(); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () { resize(); });
+  }
   window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
 
   // 切后台自动暂停

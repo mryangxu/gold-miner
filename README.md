@@ -108,13 +108,16 @@ gold-miner/
 ## 五、开发与自测
 
 ```bash
-node tools/smoke.js
+node tools/smoke.js   # 数值平衡：机器人跑三档 × 200 关
+node tools/tap.js     # 输入回归：模拟 iOS TouchEvent 点菜单/芯片/放钩
 ```
 
 它用桩件（stub）在 Node 里跑真实游戏代码：
 - 校验 200 关的物品是否出界、目标是否为正、时间是否过短；
 - 用一个「自动瞄准机器人」把三档难度各 200 关全部打一遍，输出分段通关率（当前：轻松 ~90%、标准 ~75%、硬核 ~63%；机器人不会用炸药/手套/怀表，人类熟练后上限更高）；
 - 渲染全部界面，防止空指针。
+
+`tools/tap.js` 会用「只有 `changedTouches`、没有 `clientX`」的事件对象去点菜单——这正是 iOS Safari/WKWebView 里 TouchEvent 的真实形态（TouchEvent 不继承 MouseEvent）。桌面浏览器永远测不出这个问题，所以单独留了一个回归用例。
 
 只关心某档的胜率可以用调参器（多跑几轮取平均，避免钱袋随机性干扰）：
 
