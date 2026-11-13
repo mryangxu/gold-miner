@@ -44,10 +44,15 @@
 
 不需要 Mac、不需要开发者账号。
 
-1. 新建一个 GitHub 仓库，把 `gold-miner` 目录里的全部内容上传（网页版拖拽即可）。
-2. 仓库页面 → **Actions** → 左侧 **Build unsigned IPA** → **Run workflow**。
+1. 新建一个 GitHub 仓库，把 `gold-miner` 目录里的全部内容上传（网页版拖拽即可；`.github/` 目录要一起传，否则 Actions 里看不到这个 workflow）。
+2. 仓库页面 → **Actions** → 左侧 **Build unsigned IPA** → **Run workflow**，镜像保持默认 `macos-15` 即可。
 3. 等 5~10 分钟（macOS 机器会自动 `xcodegen` + `xcodebuild`）。
 4. 进入构建结果页面，底部 **Artifacts** 下载 `GoldMiner-ipa.zip`，解压得到 **`GoldMiner.ipa`**。
+
+> **镜像退役提示**：GitHub 会周期性下线旧 macOS 镜像。如果 Run workflow 后任务秒挂、注解里写着
+> `The configuration 'macos-14-arm64-us-default' is not supported`，说明 `runs-on` 指向了一个已退役的镜像
+> （macOS 14 已于 2026-11-02 下线）。本 workflow 现在默认 `macos-15`，并在手动触发时提供镜像下拉框
+> （`macos-15` / `macos-26` / `macos-latest` / `macos-15-intel`），换一个重跑即可，不用改文件。
 
 ### 方式 C：Mac 本地编译
 

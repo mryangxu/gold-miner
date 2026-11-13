@@ -2,18 +2,40 @@ name: Build unsigned IPA
 
 # 在 GitHub 的 macOS 云端机器上编译出未签名 IPA，
 # 下载后可直接用 TrollStore 安装（无需越狱、无需证书）。
+#
+# ⚠️ runner 镜像会退役：GitHub 已于 2026-11-02 下线 macOS 14 镜像，
+#    写死 macos-14 会直接报 “The configuration 'macos-14-arm64-us-default' is not supported”，
+#    任务在 0s 被取消。这里用 macos-15，并允许手动选择镜像，镜像退役时不用改文件。
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'macOS 运行器镜像'
+        required: false
+        default: macos-15
+        type: choice
+        options:
+          - macos-15
+          - macos-26
+          - macos-latest
+          - macos-15-intel
 
 jobs:
   build:
-    runs-on: macos-14
+    # 未手动指定时默认 macos-15（Apple Silicon，自带 Xcode 16+）
+    runs-on: ${{ inputs.runner || 'macos-15' }}
     timeout-minutes: 30
 
     steps:
+      - name: 环境信息
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
       - name: 检出代码
         uses: actions/checkout@v4
 
@@ -41,6 +63,7 @@ jobs:
             -scheme GoldMiner \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
